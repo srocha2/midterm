@@ -27,10 +27,15 @@
 //
 #include <stdio.h>
 #include <stdlib.h>
+//#include <iostream>
 #include <GL/glfw.h>
+#include <math.h>
 //macros
 #define rnd() (double)rand()/(double)RAND_MAX
-//prototypes
+//prototypesi
+void grid_size(int);
+
+void check_win(int, int);
 void init(void);
 int init_glfw(void);
 void init_opengl(void);
@@ -41,6 +46,7 @@ void get_grid_center(const int i, const int j, int cent[2]);
 int xres=640;
 int yres=480;
 //
+int gsize;
 typedef struct t_grid {
 	int status;
 	int over;
@@ -48,7 +54,7 @@ typedef struct t_grid {
 	struct t_grid *prev;
 	struct t_grid *next;
 } Grid;
-Grid grid[8][8];
+Grid grid[100][100];
 int grid_dim=4;
 int board_dim;
 int qsize;
@@ -57,13 +63,19 @@ int lbutton=0;
 int rbutton=0;
 //
 GLuint Htexture;
+GLuint Background;
 GLuint Vtexture;
 GLuint loadBMP(const char *imagepath);
 
 
-int main(void)
-{
-	if (init_glfw()) {
+int main()
+{	
+    printf("what size grid?\n");
+    printf("Input only: 4,5,6,7,8,9 \n");
+    scanf("%i",&gsize);
+	//sqrt(n);
+    
+    if (init_glfw()) {
 		exit(EXIT_FAILURE);
 	}
 	init_opengl();
@@ -71,6 +83,8 @@ int main(void)
 	srand((unsigned int)time(NULL));
 	while(1) {
 		check_mouse();
+		
+	//	check_win(1,1);
 		render();
 		glfwSwapBuffers();
 		if (glfwGetKey(GLFW_KEY_ESC) == GLFW_PRESS) break;
@@ -78,8 +92,70 @@ int main(void)
 	}
 	glfwTerminate();
 	exit(EXIT_SUCCESS);
+	return 0;
+}
+/*
+void check_win(int a, int b)
+{
+    //Check for horizontal win
+    int i,j;
+    int connect;
+    if (grid[i][j].status==1)
+    {
+    for (i = a; i < gsize; i++)
+    {
+	for (j = b; j<gsize; j++)
+	{
+    		//check for adjacent squares
+		////check top
+		if (grid[i+1][j].status==1)
+		{
+		    grid[i+1][j].over=1;
+		    check_win(i+1, j);
+	       	}
+	       	//check top-right
+		if (grid[i+1][j+1].status==1)
+		{
+		    check_win(i+1, j+1);
+    		}
+		//check right
+		if (grid[i][j+1].status==1)
+	       	{
+		    check_win(i, j+1);
+		}
+		//check bottom-right
+		if (grid[i-1][j-1].status==1)
+		{
+		    check_win(i-1, j-1);
+		}
+		//check bottom
+		if (grid[i-1][j+1].status==1)
+		{
+		    check_win(i-1, j+1);
+		}
+		//check bottom-left
+		if (grid[i-1][j-1].status==1)
+		{
+		    check_win(i-1, j-1);
+	       	}
+		//check left
+		if (grid[i-1][j].status==1)
+		{
+		    check_win(i-1, j);
+    		}
+    		//check top-left
+		if (grid[i-1][j+1].status==1)
+    		{
+		    check_win(i-1, j+1);
+    		}
+    	    }
+	}
+    }
+    //Check for vertical win
 }
 
+*/
+//--------------------------------
 int init_glfw(void)
 {
 	int nmodes;
@@ -124,10 +200,11 @@ void init_opengl(void)
 	glBindTexture(GL_TEXTURE_2D, 0);
 	//
 	glEnable(GL_TEXTURE_2D);
-	Htexture = loadBMP("H.bmp");
+	Htexture = loadBMP("index1.bmp");
+	Background = loadBMP("space.bmp");
 	Vtexture = loadBMP("V.bmp");
 	glBindTexture(GL_TEXTURE_2D, 0);
-	printf("tex: %i %i\n",Htexture,Vtexture);
+	printf("tex: %i %i %i\n",Htexture,Background,Vtexture);
 }
 
 void init(void)
@@ -150,7 +227,10 @@ void init(void)
 	//For instance, 8x8 board, or 20x20 board.
 	//Maybe get this parameter at the command-line.
 }
-
+/*-------------------------------*/
+//void grid size(void)
+//{
+	
 void check_mouse(void)
 {
 	static int sx=0,sy=0;	
@@ -176,13 +256,13 @@ void check_mouse(void)
 	//
 	//is the mouse over any grid squares?
 	//
-	for (i=0; i<4; i++) {
-		for (j=0; j<4; j++) {
+	for (i=0; i<gsize; i++) {
+		for (j=0; j<gsize; j++) {
 			grid[i][j].over=0;
 		}
 	}
-	for (i=0; i<4; i++) {
-		for (j=0; j<4; j++) {
+	for (i=0; i<gsize; i++) {
+		for (j=0; j<gsize; j++) {
 			get_grid_center(i,j,cent);
 			if (x >= cent[0]-qsize &&
 				x <= cent[0]+qsize &&
@@ -209,8 +289,8 @@ void GLFWCALL mouse_click(int button, int action)
 		glfwGetMousePos(&x, &y);
 		//reverse the y position
 		y = yres - y;
-		for (i=0; i<4; i++) {
-			for (j=0; j<4; j++) {
+		for (i=0; i<gsize; i++) {
+			for (j=0; j<gsize; j++) {
 				get_grid_center(i,j,cent);
 				if (x >= cent[0]-qsize &&
 					x <= cent[0]+qsize &&
@@ -238,10 +318,10 @@ void get_grid_center(const int i, const int j, int cent[2])
 	//quad upper-left corner
 	int quad[2];
 	//make board dim divisible by 4
-	board_dim >>= 2;
-	board_dim <<= 2;
+	//board_dim >>= 2;
+	//board_dim <<= 2;
 	//bq is the width of one grid section
-	bq = (board_dim >> 2);
+	bq = (board_dim / gsize);
 	//-------------------------------------
 	quad[0] = s0-b2;
 	quad[1] = s1-b2;
@@ -250,6 +330,44 @@ void get_grid_center(const int i, const int j, int cent[2])
 	cent[0] += (bq * j);
 	cent[1] += (bq * i);
 }
+//==========
+
+/*void grid_size(int n)
+{
+//    int n;
+    printf("what size grid?\n");
+    printf("Input only: 16,25,36,49,64,81: \n");
+    scanf("%i",n);
+	//sqrt(n);
+	int temp;
+	temp = n;
+	printf("You chose temp: %i", temp);	
+	/*
+if( n == 25)
+	{
+	    for (i=0; i<temp; i++) {
+		for (j=0; j<temp; j++) {
+			get_grid_center(i,j,cent);
+			glColor3f(0.5f, 0.1f, 0.1f);
+			if (grid[i][j].over) {
+				glColor3f(1.0f, 1.0f, 0.0f);
+			}
+			glBindTexture(GL_TEXTURE_2D, 0);
+			if (grid[i][j].status==1) glBindTexture(GL_TEXTURE_2D, Vtexture);
+			if (grid[i][j].status==2) glBindTexture(GL_TEXTURE_2D, Htexture);
+			glBegin(GL_QUADS);
+				glTexCoord2f(0.0f, 0.0f); glVertex2i(cent[0]-qsize,cent[1]-qsize);
+				glTexCoord2f(0.0f, 1.0f); glVertex2i(cent[0]-qsize,cent[1]+qsize);
+				glTexCoord2f(1.0f, 1.0f); glVertex2i(cent[0]+qsize,cent[1]+qsize);
+				glTexCoord2f(1.0f, 0.0f); glVertex2i(cent[0]+qsize,cent[1]-qsize);
+			glEnd();
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
+	    }
+	}
+}*/
+
+//===========
 
 void render(void)
 {
@@ -282,13 +400,23 @@ void render(void)
 	glOrtho(0, xres, 0, yres, -1, 1);
 	glColor3f(0.8f, 0.6f, 0.2f);
 	//draw stuff
-	//draw the main game board in middle of screen
+	//draw the main screen
+	glBindTexture(GL_TEXTURE_2D, Background);
 	glBegin(GL_QUADS);
-		glVertex2i(s0-b2, s1-b2);
-		glVertex2i(s0-b2, s1+b2);
-		glVertex2i(s0+b2, s1+b2);
-		glVertex2i(s0+b2, s1-b2);
+		glTexCoord2f(0.0f, 0.0f); glVertex2i(0, 0);
+		glTexCoord2f(0.0f, 1.0f); glVertex2i(0, yres);
+		glTexCoord2f(1.0f, 1.0f); glVertex2i(xres, yres);
+		glTexCoord2f(1.0f, 0.0f); glVertex2i(xres, 0);
 	glEnd();
+	glBindTexture(GL_TEXTURE_2D, 0);
+	//draw the main game board in middle of screen
+/*	glBindTexture(GL_TEXTURE_2D, Background);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0f, 0.0f); glVertex2i(s0-b2, s1-b2);
+		glTexCoord2f(0.0f, 1.0f); glVertex2i(s0-b2, s1+b2);
+		glTexCoord2f(1.0f, 1.0f); glVertex2i(s0+b2, s1+b2);
+		glTexCoord2f(1.0f, 0.0f); glVertex2i(s0+b2, s1-b2);
+	glEnd(); */
 	//draw grid lines
 	//vertical
 	glColor3f(0.1f, 0.1f, 0.1f);
@@ -324,8 +452,8 @@ void render(void)
 	//draw a new square in center of each grid
 	//squares are slightly smaller than grid
 	//
-	for (i=0; i<4; i++) {
-		for (j=0; j<4; j++) {
+	for (i=0; i<gsize; i++) {
+		for (j=0; j<gsize; j++) {
 			get_grid_center(i,j,cent);
 			glColor3f(0.5f, 0.1f, 0.1f);
 			if (grid[i][j].over) {
@@ -398,6 +526,7 @@ GLuint loadBMP(const char *imagepath)
 	GLuint textureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
+GLuint Background;
 	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
